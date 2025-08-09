@@ -751,6 +751,7 @@ body.no-scroll { overflow: hidden; }
 /* Responsive Design */
 @media (max-width: 1024px) {
   /* Tablet: adopt mobile header and off-canvas sidebar too */
+  html, body { height: 100dvh; overflow: hidden; }
   .mobile-header {
     position: fixed;
     top: 0;
@@ -787,7 +788,10 @@ body.no-scroll { overflow: hidden; }
 
   .sidebar.open { left: 0; }
 
-  .main-content { height: calc(100vh - 56px); }
+  .app-container { height: 100%; }
+  .main-content { height: calc(100dvh - 56px); overflow: hidden; }
+  .content-section, .content-section.active { height: 100%; }
+  .chat-window { height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
   /* Keep input fixed on tablets too */
   .input-area {
@@ -990,10 +994,11 @@ body.no-scroll { overflow: hidden; }
   /* Mobile Main Content */
   .main-content {
     flex: 1;
-    height: calc(100vh - 56px);
+    height: calc(100dvh - 56px);
     padding: 0;
     display: flex;
     flex-direction: column;
+    overflow: hidden; /* prevent page from growing; only chat scrolls */
   }
   
   /* Mobile Chat Section */
@@ -1011,7 +1016,8 @@ body.no-scroll { overflow: hidden; }
   .chat-window {
     flex: 1 1 auto;
     padding: 16px;
-    overflow-y: auto;
+    overflow-y: auto; /* separate scroll area */
+    -webkit-overflow-scrolling: touch;
     background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
     padding-bottom: 96px; /* space so input never overlaps content */
   }
