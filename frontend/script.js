@@ -26,6 +26,8 @@ document.addEventListener('DOMContentLoaded', function() {
     addParticleEffect();
     loadTheme();
     setupMobileMenu();
+    // Initial padding adjustment
+    adjustChatBottomPadding();
 });
 
 // Add subtle particle effect to background
@@ -114,8 +116,12 @@ function adjustChatBottomPadding() {
     const height = inputArea.offsetHeight
       + parseFloat(style.marginTop || 0)
       + parseFloat(style.marginBottom || 0);
-    chatWindow.style.paddingBottom = `${Math.max(96, height + 24)}px`;
+    chatWindow.style.paddingBottom = `${Math.max(120, height + 24)}px`;
 }
+
+// Recalculate on resize and orientation changes
+window.addEventListener('resize', adjustChatBottomPadding);
+window.addEventListener('orientationchange', adjustChatBottomPadding);
 
 // Mobile drawer menu setup
 function setupMobileMenu() {
@@ -261,6 +267,7 @@ function appendMessage(content, sender = "user", isTyping = false) {
     bubble.appendChild(bubbleContent);
     chatWindow.appendChild(bubble);
     chatWindow.scrollTop = chatWindow.scrollHeight;
+    adjustChatBottomPadding();
     
     // Remove welcome message after first user message
     const welcomeMessage = chatWindow.querySelector('.welcome-message');
@@ -272,6 +279,7 @@ function appendMessage(content, sender = "user", isTyping = false) {
 // Show typing indicator
 function showTypingIndicator() {
     appendMessage("", "ai", true);
+    adjustChatBottomPadding();
 }
 
 // Remove typing indicator
@@ -302,6 +310,7 @@ function animateProgressBar() {
 // Hide progress bar
 function hideProgressBar() {
     progressBar.classList.add("hidden");
+    adjustChatBottomPadding();
 }
 
 // Scan message function

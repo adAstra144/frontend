@@ -788,6 +788,31 @@ body.no-scroll { overflow: hidden; }
   .sidebar.open { left: 0; }
 
   .main-content { height: calc(100vh - 56px); }
+
+  /* Keep input fixed on tablets too */
+  .input-area {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 12px 16px;
+    gap: 8px;
+    background: rgba(15, 23, 42, 0.95);
+    border-top: 1px solid rgba(99, 102, 241, 0.2);
+    backdrop-filter: blur(20px);
+    z-index: 1000;
+    max-width: none;
+    margin: 0;
+  }
+
+  /* Ensure content isn't hidden under the fixed input */
+  .chat-window {
+    padding-bottom: 96px;
+  }
+
+  .progress-bar {
+    margin: 0 16px 80px;
+  }
 }
 
 @media (max-width: 768px) {
