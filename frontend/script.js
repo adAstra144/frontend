@@ -147,11 +147,9 @@ function setupMobileMenu() {
 
     menuToggle.addEventListener('click', (e) => {
         e.preventDefault();
-        if (sidebar.classList.contains('open')) {
-            closeMenu();
-        } else {
-            openMenu();
-        }
+        // Toggle menu without preventing the button click from triggering nav actions
+        const willOpen = !sidebar.classList.contains('open');
+        if (willOpen) openMenu(); else closeMenu();
     });
 
     backdrop.addEventListener('click', closeMenu);
@@ -161,11 +159,14 @@ function setupMobileMenu() {
         if (e.key === 'Escape') closeMenu();
     });
 
-    // Close after selecting a sidebar nav item (on mobile)
+    // Optional auto-close: only when navigating to Chat on small screens
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            if (window.matchMedia('(max-width: 768px)').matches) {
-                closeMenu();
+            const onclickValue = btn.getAttribute('onclick') || '';
+            const isChatTarget = onclickValue.includes("showSection('chat'") || onclickValue.includes("showSection(\"chat\"")
+            if ((window.matchMedia('(max-width: 1024px)').matches) && isChatTarget) {
+                // Defer closing to allow showSection to run first
+                setTimeout(closeMenu, 0);
             }
         });
     });
@@ -195,19 +196,31 @@ function showSection(sectionName) {
     switch(sectionName) {
         case 'chat':
             document.getElementById('chatSection').classList.add('active');
-            document.querySelector('[onclick="showSection(\'chat\')"]').classList.add('active');
+            {
+                const btn = document.querySelector('[onclick="showSection(\'chat\')"]') || document.querySelector('[onclick="showSection(\"chat\")"]');
+                if (btn) btn.classList.add('active');
+            }
             break;
         case 'history':
             document.getElementById('historySection').classList.remove('hidden');
-            document.querySelector('[onclick="showSection(\'history\')"]').classList.add('active');
+            {
+                const btn = document.querySelector('[onclick="showSection(\'history\')"]') || document.querySelector('[onclick="showSection(\"history\")"]');
+                if (btn) btn.classList.add('active');
+            }
             break;
         case 'stats':
             document.getElementById('statsSection').classList.remove('hidden');
-            document.querySelector('[onclick="showSection(\'stats\')"]').classList.add('active');
+            {
+                const btn = document.querySelector('[onclick="showSection(\'stats\')"]') || document.querySelector('[onclick="showSection(\"stats\")"]');
+                if (btn) btn.classList.add('active');
+            }
             break;
         case 'status':
             document.getElementById('statusSection').classList.remove('hidden');
-            document.querySelector('[onclick="showSection(\'status\')"]').classList.add('active');
+            {
+                const btn = document.querySelector('[onclick="showSection(\'status\')"]') || document.querySelector('[onclick="showSection(\"status\")"]');
+                if (btn) btn.classList.add('active');
+            }
             break;
     }
 }
