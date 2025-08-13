@@ -15,6 +15,7 @@ let totalScans = 0;
 let phishingScans = 0;
 let safeScans = 0;
 let apiUrl = "https://adAStra144-Anti-Phishing-Scanner-0.hf.space";
+let explainerUrl = "http://192.168.1.100:7861";
 let isScanning = false;
 
 // Initialize the app
@@ -266,6 +267,13 @@ function showSection(sectionName) {
                 if (btn) btn.classList.add('active');
             }
             break;
+            case 'camera':
+    document.getElementById('cameraMainSection').classList.add('active');
+    {
+        const btn = document.querySelector('[onclick="showSection(\'camera\')"]');
+        if (btn) btn.classList.add('active');
+    }
+    break;
         case 'stats':
             document.getElementById('statsMainSection').classList.add('active');
             {
@@ -288,7 +296,16 @@ function showSection(sectionName) {
             }
             if (!window.__quizInit) { initQuiz(); window.__quizInit = true; }
             break;
+            case 'feedback':
+    document.getElementById('feedbackMainSection').classList.add('active');
+    {
+        const btn = document.querySelector('[onclick="showSection(\'feedback\')"]') || 
+                    document.querySelector('[onclick="showSection(\"feedback\")"]');
+        if (btn) btn.classList.add('active');
     }
+    break;
+    }
+    
 
     // Auto-close drawer on mobile after navigation to any section
     const menuToggle = document.getElementById('menuToggle');
@@ -304,7 +321,7 @@ function showSection(sectionName) {
     }
 }
 
-// Simple Quiz Engine
+// ---------- REPLACE initQuiz() WITH THIS ----------
 function initQuiz() {
     const questions = [
         {
@@ -349,6 +366,9 @@ function initQuiz() {
     let autoTimer = 0;
     const AUTO_NEXT_DELAY = 1200; // ms
 
+    // load best score from localStorage
+    let bestPercent = parseInt(localStorage.getItem('surLinkBestQuiz') || '0', 10);
+
     function render() {
         if (autoTimer) { clearTimeout(autoTimer); autoTimer = 0; }
         quizProgress.textContent = `Question ${idx + 1} of ${questions.length}`;
@@ -358,8 +378,9 @@ function initQuiz() {
         quizFeedback.textContent = '';
         quizNextBtn.disabled = true;
         quizNextBtn.style.display = 'none';
+        quizRestartBtn.style.display = 'none';
 
-        questions[idx].a.forEach((ans, i) => {
+        questions[idx].a.forEach((ans) => {
             const btn = document.createElement('button');
             btn.className = 'quiz-answer';
             btn.textContent = ans.text;
@@ -369,6 +390,7 @@ function initQuiz() {
     }
 
     function selectAnswer(btn, correct) {
+        // disable all
         Array.from(quizAnswers.children).forEach(b => b.disabled = true);
         if (correct) {
             score += 1;
@@ -376,28 +398,58 @@ function initQuiz() {
             quizFeedback.textContent = '✅ Correct!';
         } else {
             btn.classList.add('incorrect');
-            quizFeedback.textContent = '❌ Not quite. Be cautious with urgent requests and unfamiliar links.';
+            // show correct one
+            const correctText = questions[idx].a.find(a => a.correct).text;
+            quizFeedback.textContent = `❌ Not quite. Correct: ${correctText}`;
         }
         quizScoreEl.textContent = `Score: ${score}`;
-        // Auto-advance after a short delay
         autoTimer = setTimeout(proceed, AUTO_NEXT_DELAY);
     }
 
     function proceed() {
         if (idx < questions.length - 1) {
             idx += 1;
-            quizNextBtn.textContent = 'Next';
             render();
         } else {
-            quizQuestion.textContent = `You scored ${score} / ${questions.length}!`;
-            quizAnswers.innerHTML = '';
-            quizFeedback.textContent = 'Great job! Restart to try again.';
-            quizNextBtn.style.display = 'none';
-            quizRestartBtn.style.display = 'inline-flex';
+            finishQuiz();
         }
     }
 
-    quizNextBtn.addEventListener('click', proceed);
+    function finishQuiz() {
+        const percent = Math.round((score / questions.length) * 100);
+        quizQuestion.textContent = `You scored ${score} / ${questions.length} (${percent}%)!`;
+        quizAnswers.innerHTML = '';
+        quizFeedback.textContent = percent >= 70 ? '🎉 Nice — you passed!' : '🔎 Review the tips to improve.';
+        quizNextBtn.style.display = 'none';
+        quizRestartBtn.style.display = 'inline-flex';
+
+        // save best percent
+        if (percent > bestPercent) {
+            bestPercent = percent;
+            localStorage.setItem('surLinkBestQuiz', String(bestPercent));
+            showBestQuizStat(bestPercent);
+        }
+    }
+
+    // optional helper: show best quiz stat in the stats grid
+    function showBestQuizStat(best) {
+        const statsGrid = document.querySelector('.stats-grid');
+        if (!statsGrid) return;
+        let bestEl = document.getElementById('bestQuizStat');
+        if (!bestEl) {
+            const div = document.createElement('div');
+            div.className = 'stat-item';
+            div.innerHTML = `<span class="stat-number" id="bestQuizStat">${best}%</span><span class="stat-label">Best Quiz</span>`;
+            statsGrid.appendChild(div);
+        } else {
+            bestEl.textContent = `${best}%`;
+        }
+    }
+
+    quizNextBtn.addEventListener('click', () => {
+        clearTimeout(autoTimer);
+        proceed();
+    });
 
     quizRestartBtn.addEventListener('click', () => {
         idx = 0;
@@ -407,8 +459,11 @@ function initQuiz() {
         render();
     });
 
+    // initial render + show best if present
     render();
+    if (bestPercent > 0) showBestQuizStat(bestPercent);
 }
+// ---------- end of initQuiz replacement ----------
 
 // Check API status
 async function checkApiStatus() {
@@ -416,6 +471,7 @@ async function checkApiStatus() {
         statusIndicator.className = "status-indicator checking";
         statusText.textContent = "Checking...";
         
+        // Check main classification API
         const response = await fetch(`${apiUrl}/health`, {
             method: 'GET',
             headers: {
@@ -423,9 +479,23 @@ async function checkApiStatus() {
             }
         });
         
+        // Check explainer API
+        let explainerStatus = "Unknown";
+        try {
+            const expResponse = await fetch(`${explainerUrl}/health`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            explainerStatus = expResponse.ok ? "Available" : "Unavailable";
+        } catch (error) {
+            explainerStatus = "Unavailable";
+        }
+        
         if (response.ok) {
             statusIndicator.className = "status-indicator online";
-            statusText.textContent = "Online";
+            statusText.textContent = `Online (Explainer: ${explainerStatus})`;
         } else {
             throw new Error('API not responding');
         }
@@ -544,6 +614,28 @@ async function scanMessage() {
 
         const data = await response.json();
         
+        // Get explanation from the explainer AI model
+        try {
+            const expResp = await fetch(`${explainerUrl}/explain`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    message: message,
+                    label: data.result // "Safe" or "Phishing"
+                })
+            });
+            
+            if (expResp.ok) {
+                const expData = await expResp.json();
+                data.explanation = expData.explanation || "";
+            }
+        } catch (error) {
+            console.log("Explanation service unavailable:", error);
+            // Continue without explanation
+        }
+        
         // Remove loading states
         removeTypingIndicator();
         hideProgressBar();
@@ -577,6 +669,7 @@ async function scanMessage() {
 function formatResult(data) {
     const { result, confidence } = data;
     const isPhishing = result.toLowerCase().includes("phishing");
+    const explanation = (data && typeof data.explanation === 'string' && data.explanation.trim()) ? data.explanation.trim() : '';
     
     const icon = isPhishing ? "🚨" : "✅";
     const color = isPhishing ? "#ef4444" : "#10b981";
@@ -594,6 +687,11 @@ function formatResult(data) {
                 "✅ This message appears to be safe. However, always remain vigilant with personal information."
             }
         </div>
+        ${explanation ? `
+        <div style="margin-top: 12px; padding: 12px; border: 1px solid rgba(99,102,241,0.3); border-radius: 10px; background: rgba(30,41,59,0.6); color: #e2e8f0;">
+            <div style="font-weight:600; margin-bottom:6px; color:#a5b4fc;">Why this decision</div>
+            <div style="white-space: pre-wrap; line-height:1.5;">${explanation.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+        </div>` : ''}
     `;
 }
 
@@ -682,6 +780,12 @@ function updateApiUrl(url) {
     checkApiStatus();
 }
 
+// Update explainer URL
+function updateExplainerUrl(url) {
+    explainerUrl = url;
+    checkApiStatus();
+}
+
 // Auto-check API status every 30 seconds
 setInterval(checkApiStatus, 30000); 
 
@@ -715,4 +819,84 @@ function loadTheme() {
             themeToggle.checked = true;
         }
     }
-} 
+}
+document.getElementById("submitFeedback").addEventListener("click", () => {
+  const type = document.getElementById("feedbackType").value;
+  const message = document.getElementById("feedbackMessage").value.trim();
+  const status = document.getElementById("feedbackStatus");
+
+  if (!message) {
+    status.textContent = "⚠️ Please enter your feedback before submitting.";
+    status.style.color = "orange";
+    status.classList.add("show");
+    return;
+  }
+
+  console.log("📩 Feedback submitted:", { type, message });
+
+  status.textContent = "✅ Thank you! Your feedback has been sent.";
+  status.style.color = "green";
+  status.classList.add("show");
+
+  // Clear form after submission
+  document.getElementById("feedbackMessage").value = "";
+  setTimeout(() => status.classList.remove("show"), 3000);
+});
+
+document.getElementById("clearFeedback").addEventListener("click", () => {
+  document.getElementById("feedbackMessage").value = "";
+  document.getElementById("feedbackStatus").classList.remove("show");
+});
+
+// === CAMERA SCANNER ===
+const startCameraBtn = document.getElementById("startCamera");
+const capturePhotoBtn = document.getElementById("capturePhoto");
+const cameraStream = document.getElementById("cameraStream");
+const snapshotCanvas = document.getElementById("snapshotCanvas");
+const cameraResult = document.getElementById("cameraResult");
+let cameraStreamTrack = null;
+
+// Start Camera
+startCameraBtn.addEventListener("click", async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    cameraStream.srcObject = stream;
+    cameraStreamTrack = stream.getTracks()[0];
+    capturePhotoBtn.disabled = false;
+    cameraResult.textContent = "Camera ready. Capture when ready.";
+  } catch (err) {
+    cameraResult.textContent = "❌ Camera access denied or not available.";
+    console.error(err);
+  }
+});
+
+// Capture Photo & Extract Text
+capturePhotoBtn.addEventListener("click", () => {
+  const ctx = snapshotCanvas.getContext("2d");
+  snapshotCanvas.width = cameraStream.videoWidth;
+  snapshotCanvas.height = cameraStream.videoHeight;
+  ctx.drawImage(cameraStream, 0, 0);
+
+  cameraResult.textContent = "🔍 Scanning image for text...";
+
+  // Use Tesseract.js OCR
+  Tesseract.recognize(snapshotCanvas, 'eng')
+    .then(({ data: { text } }) => {
+      if (cameraStreamTrack) cameraStreamTrack.stop(); // Stop camera
+
+      if (!text.trim()) {
+        cameraResult.textContent = "⚠️ No readable text found in image.";
+        return;
+      }
+
+      cameraResult.innerHTML = `<strong>Extracted Text:</strong><br>${text}`;
+
+      // Send extracted text to phishing scanner
+      messageInput.value = text;
+      scanMessage();
+    })
+    .catch(err => {
+      cameraResult.textContent = "❌ Failed to process image.";
+      console.error(err);
+    });
+});
